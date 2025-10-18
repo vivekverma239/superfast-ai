@@ -1,6 +1,16 @@
 import { sql } from "drizzle-orm";
 import { sqliteTable, integer, text, index } from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
+import {
+  BasicPdfParseResult,
+  DocumentMetadata,
+  Toc,
+} from "@/ai/workflows/parsePdf";
+
+export type FileMetadata = DocumentMetadata & {
+  toc: Toc;
+  totalPages: number;
+};
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -102,12 +112,11 @@ export const file = sqliteTable(
     s3Key: text({ length: 255 }).notNull(),
     fileType: text({ length: 50 }),
     fileSize: integer(),
-    metadata: text({ mode: "json" }).$type<{
-      summary?: string;
-      tags?: string[];
-      pageCount?: number;
-    }>(),
+    metadata: text({ mode: "json" }).$type<FileMetadata>(),
     userId: text({ length: 40 }).notNull(),
+    status: text({ enum: ["pending", "indexed", "error"] })
+      .default("pending")
+      .notNull(),
     createdAt: integer()
       .notNull()
       .$defaultFn(() => Date.now()),

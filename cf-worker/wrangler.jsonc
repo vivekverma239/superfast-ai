@@ -3,7 +3,10 @@
   "name": "cf",
   "main": "src/index.ts",
   "compatibility_date": "2025-10-16",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat",
+    "nodejs_compat_populate_process_env"
+  ],
   "vars": {
     "MY_VAR": "my-variable"
   },
@@ -24,6 +27,13 @@
       "binding": "DB",
       "database_name": "superfast-ai",
       "database_id": "fc0d14ee-1a2f-4b47-9336-94f1e4cef9bd"
+    }
+  ],
+  "vectorize": [
+    {
+      "binding": "VECTOR_STORE",
+      "index_name": "superfast-ai-index",
+      "remote": true
     }
   ]
   // "ai": {

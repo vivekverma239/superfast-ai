@@ -2,13 +2,15 @@ import { getDb } from "@/db";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { Storage } from "../storage";
+import { Storage } from "./storage";
 import type { AppType } from "./types";
 import { auth } from "./utils/auth";
 // Import routes
 import folders from "./routes/folders";
 import files from "./routes/files";
 import chats from "./routes/chats";
+import agents from "./routes/agents";
+import { VectorStore } from "./vector-store";
 
 const app = new Hono<AppType>();
 
@@ -19,6 +21,8 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000",
+      "http://localhost:3001",
+
       "http://localhost:3002",
       "https://superfast-ai.vercel.app",
     ],
@@ -43,6 +47,13 @@ app.use("*", async (c, next) => {
     // Initialize database
     const db = getDb(c.env.DB);
     c.set("db", db);
+
+    if (!c.env.VECTOR_STORE) {
+      return c.json({ error: "Vector store not found" }, 500);
+    }
+    // Initialize vector store
+    const vectorStore = new VectorStore(c.env.VECTOR_STORE);
+    c.set("vectorStore", vectorStore);
 
     return next();
   } catch (error) {
@@ -89,7 +100,7 @@ app.get("/", (c) => {
 app.route("/api/folders", folders);
 app.route("/api/files", files);
 app.route("/api/chats", chats);
-
+app.route("/api/agents", agents);
 // 404 handler
 app.notFound((c) => {
   return c.json({ error: "Not found" }, 404);

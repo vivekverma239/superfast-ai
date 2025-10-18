@@ -33,6 +33,31 @@ folders.get("/", async (c) => {
   return c.json(foldersWithCounts);
 });
 
+// GET /folders/:folderId - Get folder details with file count
+folders.get("/:folderId", async (c) => {
+  const db = c.get("db");
+  const userId = c.get("userId");
+  const folderId = c.req.param("folderId");
+
+  const folderRecord = await db
+    .select()
+    .from(folder)
+    .where(and(eq(folder.id, folderId), eq(folder.userId, userId)))
+    .limit(1);
+
+  if (folderRecord.length === 0) {
+    return c.json({ error: "Folder not found" }, 404);
+  }
+
+  // Get file count for the folder
+  const files = await db.select().from(file).where(eq(file.folderId, folderId));
+
+  return c.json({
+    ...folderRecord[0],
+    fileCount: files.length,
+  });
+});
+
 // POST /folders - Create new folder
 folders.post("/", zValidator("json", createFolderSchema), async (c) => {
   const db = c.get("db");

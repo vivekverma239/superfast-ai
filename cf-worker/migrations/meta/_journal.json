@@ -8,6 +8,13 @@
       "when": 1760597938774,
       "tag": "0000_short_celestials",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1760706125251,
+      "tag": "0001_flat_rocket_racer",
+      "breakpoints": true
     }
   ]
 }

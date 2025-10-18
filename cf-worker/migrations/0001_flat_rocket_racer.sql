@@ -1,0 +1,1 @@
+ALTER TABLE `file` ADD `status` text DEFAULT 'pending' NOT NULL;

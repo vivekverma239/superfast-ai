@@ -29,7 +29,23 @@ export class Storage {
   }
 
   async download(key: string) {
-    return this.bucket.get(key);
+    // Try downloading via signed url
+    try {
+      const url = await this.getUrl(key);
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${key}`);
+      }
+      const body = await response.arrayBuffer();
+      return new Uint8Array(body);
+    } catch (error) {
+      // If the signed url fails, try downloading via direct download
+      const body = await this.bucket.get(key);
+      if (!body) {
+        throw new Error(`Failed to download file: ${key}`);
+      }
+      return new Uint8Array(await body.arrayBuffer());
+    }
   }
 
   async delete(key: string) {
@@ -64,5 +80,27 @@ export class Storage {
         expiresIn: 60 * 60 * 24,
       }
     );
+  }
+
+  async getCachedObject<T>(key: string): Promise<T | undefined> {
+    const cachedObject = await this.bucket.get(`cached-objects/${key}`);
+    if (!cachedObject) {
+      return undefined;
+    }
+
+    // Parse the cached object into json
+    try {
+      const data: T = JSON.parse(await cachedObject.text());
+      return data;
+    } catch (error) {
+      console.error(`Failed to parse cached object: ${key}`, error);
+      // If the cached object is not a valid json, delete it
+      return undefined;
+    }
+  }
+
+  async putCachedObject<T>(key: string, data: T) {
+    const json = JSON.stringify(data);
+    await this.bucket.put(`cached-objects/${key}`, new Blob([json]));
   }
 }

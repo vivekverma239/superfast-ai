@@ -45,19 +45,19 @@ export function FileUploadDialog({
 
     try {
       // Step 1: Create file record and get upload URL
-      const { uploadUrl } = await workerRequest<{ uploadUrl: string }>(
-        "/api/files",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: selectedFile.name,
-            folderId,
-            fileType: selectedFile.type,
-            fileSize: selectedFile.size,
-          }),
-        }
-      );
+      const { file, uploadUrl } = await workerRequest<{
+        file: { id: string };
+        uploadUrl: string;
+      }>("/api/files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: selectedFile.name,
+          folderId,
+          fileType: selectedFile.type,
+          fileSize: selectedFile.size,
+        }),
+      });
       setProgress(30);
 
       // Step 2: Upload file to S3
@@ -70,6 +70,14 @@ export function FileUploadDialog({
       });
 
       if (!uploadResponse.ok) throw new Error("Failed to upload file");
+      setProgress(70);
+
+      // Step 3: Notify completion to trigger processing
+      await workerRequest(`/api/files/${file.id}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ success: true }),
+      });
       setProgress(100);
 
       // Success
