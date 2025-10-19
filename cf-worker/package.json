@@ -1,5 +1,5 @@
 {
-  "name": "cf",
+  "name": "superfast-ai",
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",

@@ -1,7 +1,6 @@
 "use client";
 
-const WORKER_URL =
-  process.env.NEXT_PUBLIC_WORKER_URL || "http://localhost:8787";
+const WORKER_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
 
 export async function workerRequest<T = unknown>(
   path: string,

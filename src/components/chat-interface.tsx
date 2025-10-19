@@ -1,14 +1,6 @@
 "use client";
 
 import {
-  Branch,
-  BranchMessages,
-  BranchNext,
-  BranchPage,
-  BranchPrevious,
-  BranchSelector,
-} from "@/components/ai-elements/branch";
-import {
   Conversation,
   ConversationContent,
   ConversationScrollButton,
@@ -35,24 +27,14 @@ import {
   PromptInputFooter,
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
-import {
-  Message,
-  MessageAvatar,
-  MessageContent,
-} from "@/components/ai-elements/message";
+import { Message, MessageContent } from "@/components/ai-elements/message";
 import {
   Reasoning,
   ReasoningContent,
   ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
 import { Response } from "@/components/ai-elements/response";
-import {
-  Source,
-  Sources,
-  SourcesContent,
-  SourcesTrigger,
-} from "@/components/ai-elements/sources";
-import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
+
 import { GlobeIcon } from "lucide-react";
 import { useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
@@ -62,7 +44,6 @@ import {
   type UIToolInvocation,
   type UITool,
 } from "ai";
-import { nanoid } from "nanoid";
 import { useChat } from "@ai-sdk/react";
 import {
   Tool,
@@ -71,30 +52,6 @@ import {
   ToolOutput,
   ToolInput,
 } from "@/components/ai-elements/tool";
-
-type MessageType = {
-  key: string;
-  from: "user" | "assistant";
-  sources?: { href: string; title: string }[];
-  versions: {
-    id: string;
-    content: string;
-  }[];
-  reasoning?: {
-    content: string;
-    duration: number;
-  };
-  tools?: {
-    name: string;
-    description: string;
-    status: ToolUIPart["state"];
-    parameters: Record<string, unknown>;
-    result: string | undefined;
-    error: string | undefined;
-  }[];
-  avatar: string;
-  name: string;
-};
 
 const models = [
   { id: "gpt-4", name: "GPT-4" },
