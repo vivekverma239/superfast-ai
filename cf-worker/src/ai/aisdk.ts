@@ -349,10 +349,9 @@ export const generateObjectWrapper = async <T>({
         providerOptions: providerOptions,
         maxRetries: 3,
         maxOutputTokens: 12000,
-        //   experimental_telemetry: {
-        //     isEnabled: true,
-        //     tracer: getTracer(),
-        //   },
+        experimental_telemetry: {
+          isEnabled: true,
+        },
       });
       addModelUsage(model, response.usage);
       return ok(response.object as T);

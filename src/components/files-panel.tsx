@@ -19,6 +19,7 @@ import {
   Search,
   X,
   Eye,
+  MessageSquare,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,13 @@ import {
 import { workerRequest } from "@/lib/worker";
 import { PDFViewer } from "@/components/pdf-viewer";
 import { motion } from "framer-motion";
+import ChatInterface from "@/components/chat-interface";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type FileType = {
   id: string;
@@ -73,6 +81,11 @@ export function FilesPanel({
     new Set()
   );
   const [pdfViewerFile, setPdfViewerFile] = useState<{
+    id: string;
+    fileName: string;
+  } | null>(null);
+  const [isPdfChatOpen, setIsPdfChatOpen] = useState(false);
+  const [selectedFileForChat, setSelectedFileForChat] = useState<{
     id: string;
     fileName: string;
   } | null>(null);
@@ -167,6 +180,16 @@ export function FilesPanel({
 
   const closePDFViewer = () => {
     setPdfViewerFile(null);
+  };
+
+  const openPdfChat = (fileId: string, fileName: string) => {
+    setSelectedFileForChat({ id: fileId, fileName });
+    setIsPdfChatOpen(true);
+  };
+
+  const closePdfChat = () => {
+    setIsPdfChatOpen(false);
+    setSelectedFileForChat(null);
   };
 
   const searchFiles = async (query: string) => {
@@ -470,6 +493,18 @@ export function FilesPanel({
                                 View
                               </DropdownMenuItem>
                             )}
+                            {isPDF(file.fileType) &&
+                              file.status === "indexed" && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openPdfChat(file.id, file.title);
+                                  }}
+                                >
+                                  <MessageSquare className="h-4 w-4 mr-2" />
+                                  Answer from PDF
+                                </DropdownMenuItem>
+                              )}
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -534,6 +569,22 @@ export function FilesPanel({
           onClose={closePDFViewer}
         />
       )}
+
+      {/* PDF Chat Dialog */}
+      <Dialog open={isPdfChatOpen} onOpenChange={setIsPdfChatOpen}>
+        <DialogContent className="sm:max-w-5xl  h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              Answer from PDF: {selectedFileForChat?.fileName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden">
+            {selectedFileForChat && (
+              <ChatInterface fileChat={true} fileId={selectedFileForChat.id} />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

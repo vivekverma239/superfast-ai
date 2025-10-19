@@ -81,10 +81,6 @@ export default function FoldersPage() {
     setIsCreateDialogOpen(true);
   };
 
-  const handleFolderClick = (folderId: string) => {
-    router.push(`/folders/${folderId}`);
-  };
-
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">

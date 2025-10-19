@@ -19,6 +19,8 @@ export type Bindings = {
   OPENROUTER_API_KEY: string;
   GOOGLE_GENERATIVE_AI_API_KEY: string;
   OPENAI_API_KEY: string;
+  BRAINTRUST_API_KEY: string;
+  AXIOM_API_KEY: string;
 };
 
 // Variables available in context after middleware

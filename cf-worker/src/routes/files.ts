@@ -5,7 +5,13 @@ import { file } from "@/db/schema";
 import { createFileSchema } from "../schemas";
 import type { AppType } from "../types";
 import { nanoid } from "nanoid";
-import { indexFile, deleteFile, similaritySearchFile } from "@/services/files";
+import {
+  indexFile,
+  deleteFile,
+  similaritySearchFile,
+  answerFromPDF,
+} from "@/services/files";
+import { UIMessage } from "ai";
 
 const files = new Hono<AppType>();
 
@@ -204,6 +210,29 @@ files.post("/:fileId/index", async (c) => {
   await indexFile({ fileRecord: fileRecord[0]!, vectorStore, storage, db });
 
   return c.json({ success: true });
+});
+
+files.post("/:fileId/answer", async (c) => {
+  const fileId = c.req.param("fileId");
+
+  const storage = c.get("storage");
+  const db = c.get("db");
+  const data = await c.req.json<{
+    messages: UIMessage[];
+  }>();
+
+  if (!data.messages) {
+    return c.json({ error: "Messages are required" }, 400);
+  }
+
+  const result = await answerFromPDF({
+    fileId,
+    messages: data.messages,
+    storage,
+    db,
+  });
+
+  return result;
 });
 
 export default files;

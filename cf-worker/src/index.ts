@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { Storage } from "./storage";
-import type { AppType } from "./types";
+import type { AppType, Bindings } from "./types";
 import { auth } from "./utils/auth";
 // Import routes
 import folders from "./routes/folders";
@@ -11,6 +11,7 @@ import files from "./routes/files";
 import chats from "./routes/chats";
 import agents from "./routes/agents";
 import { VectorStore } from "./vector-store";
+import { instrument, ResolveConfigFn } from "@microlabs/otel-cf-workers";
 
 const app = new Hono<AppType>();
 
@@ -118,4 +119,25 @@ app.onError((err, c) => {
   );
 });
 
-export default app;
+const config: ResolveConfigFn = (env: Bindings, _trigger) => {
+  console.log(process.env.BRAINTRUST_API_KEY);
+  return {
+    exporter: {
+      url: "https://api.braintrust.dev/otel/v1/traces",
+      headers: {
+        Authorization: `Bearer ${process.env.BRAINTRUST_API_KEY}`,
+        "x-bt-parent": `project_name:superfast-ai`,
+      },
+    },
+    // exporter: {
+    //   url: "https://api.axiom.co/v1/traces",
+    //   headers: {
+    //     Authorization: `Bearer ${process.env.AXIOM_API_KEY}`,
+    //     "X-Axiom-Dataset": `superfast-ai`,
+    //   },
+    // },
+    service: { name: "superfast-ai" },
+  };
+};
+
+export default instrument(app, config);

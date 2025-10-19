@@ -7,6 +7,8 @@ import { file } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { getEmbeddings } from "@/ai/embeddings";
 import { getPdfHash } from "@/utils/pdf";
+import { answerFromPDFWithTOC, PDFAnswerAgent } from "@/ai/agents/fileAnswer";
+import { convertToModelMessages, UIMessage } from "ai";
 
 export const indexFile = async ({
   fileRecord,
@@ -138,4 +140,43 @@ export const similaritySearchFile = async ({
     .filter((result) => result !== null) as (File & { score: number })[];
 
   return results;
+};
+
+export const answerFromPDF = async ({
+  messages,
+  fileId,
+  storage,
+  db,
+}: {
+  messages: UIMessage[];
+  fileId: string;
+  storage: Storage;
+  db: Database;
+}) => {
+  // Get toc
+  const fileRecord = await db
+    .select()
+    .from(file)
+    .where(eq(file.id, fileId))
+    .get();
+  if (!fileRecord) {
+    throw new Error(`Failed to get toc: ${fileId}`);
+  }
+  const pdfBuffer = await storage.download(fileRecord.s3Key);
+  if (!pdfBuffer) {
+    throw new Error(`Failed to download file: ${fileRecord.s3Key}`);
+  }
+  const toc = fileRecord.metadata?.toc;
+  if (!toc) {
+    throw new Error(`Failed to get toc: ${fileId}`);
+  }
+  const result = PDFAnswerAgent.toUIMessageStream({
+    context: {
+      fileId,
+      fileBuffer: new Buffer(pdfBuffer),
+      toc,
+    },
+    messages: convertToModelMessages(messages),
+  });
+  return result;
 };
