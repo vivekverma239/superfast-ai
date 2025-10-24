@@ -16,15 +16,19 @@ import { MessageSquare, History } from "lucide-react";
 
 interface ChatPageProps {
   params: Promise<{ slug: string[] | undefined; id: string }>;
-  searchParams: Promise<{ threadId?: string }>;
 }
 
-export default function ChatPage({ params, searchParams }: ChatPageProps) {
+export default function ChatPage({ params }: ChatPageProps) {
   const { slug, id } = use(params);
   const folderId = id;
 
   const [threadId, setThreadId] = useState<string | undefined>(slug?.[0]);
   const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
+
+  // Update threadId when slug changes
+  useEffect(() => {
+    setThreadId(slug?.[0]);
+  }, [slug]);
 
   const handleNewChat = () => {
     setThreadId(undefined);
