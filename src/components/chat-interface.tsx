@@ -36,15 +36,12 @@ import {
 import { Response } from "@/components/ai-elements/response";
 
 import { GlobeIcon } from "lucide-react";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
-import {
-  DefaultChatTransport,
-  type ToolUIPart,
-  type UIToolInvocation,
-  type UITool,
-} from "ai";
+import { DefaultChatTransport, type UIToolInvocation, type UITool } from "ai";
 import { useChat } from "@ai-sdk/react";
+import { workerRequest } from "@/lib/worker";
+import { Button } from "@/components/ui/button";
 import {
   Tool,
   ToolContent,
@@ -52,6 +49,7 @@ import {
   ToolOutput,
   ToolInput,
 } from "@/components/ai-elements/tool";
+import { nanoid } from "nanoid";
 
 const models = [
   { id: "gpt-4", name: "GPT-4" },
@@ -89,30 +87,131 @@ const ToolCall = ({
 const ChatInterface = ({
   fileChat,
   fileId,
+  threadId,
+  onThreadIdChange,
+  folderId,
 }: {
   fileChat?: boolean;
   fileId?: string;
+  threadId?: string;
+  onThreadIdChange?: (threadId: string) => void;
+  folderId?: string;
 }) => {
-  const { messages, sendMessage, status } = useChat(
+  const [currentThreadId, setCurrentThreadId] = useState<string | undefined>(
+    undefined
+  );
+  const [model, setModel] = useState<string>(models[0].id);
+  const [text, setText] = useState<string>("");
+  const [useWebSearch, setUseWebSearch] = useState<boolean>(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(false);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const threadIdRef = useRef<string | undefined>(threadId);
+
+  // Create a new thread if none exists
+  const createNewThread = useCallback(async () => {
+    try {
+      const newChat = await workerRequest<{ id: string }>("/api/chats", {
+        method: "POST",
+        body: JSON.stringify({
+          title: "New Chat",
+          folderId: folderId || null,
+        }),
+      });
+      const newThreadId = newChat.id;
+      threadIdRef.current = newThreadId;
+      setCurrentThreadId(newThreadId);
+      console.log("newThreadId", newThreadId);
+      onThreadIdChange?.(newThreadId);
+      return newThreadId;
+    } catch (error) {
+      console.error("Failed to create new thread:", error);
+      toast.error("Failed to create new chat");
+      return null;
+    }
+  }, [folderId, onThreadIdChange]);
+
+  // No longer auto-create threads on mount - only create when first message is sent
+
+  const { messages, sendMessage, status, setMessages } = useChat(
     fileChat
       ? {
+          generateId: () => nanoid().toString(),
           transport: new DefaultChatTransport({
             api: `${process.env.NEXT_PUBLIC_API_URL}/api/files/${fileId}/answer`,
             credentials: "include",
+            body: () => ({
+              threadId: threadIdRef.current,
+              folderId: folderId,
+            }),
           }),
         }
       : {
           transport: new DefaultChatTransport({
             api: `${process.env.NEXT_PUBLIC_API_URL}/api/agents/general`,
             credentials: "include",
+            body: () => ({
+              threadId: threadIdRef.current,
+              folderId: folderId,
+            }),
           }),
         }
   );
-  const [model, setModel] = useState<string>(models[0].id);
-  const [text, setText] = useState<string>("");
-  const [useWebSearch, setUseWebSearch] = useState<boolean>(false);
 
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // Load chat history from API
+  const loadChatHistory = useCallback(
+    async (chatThreadId: string) => {
+      setIsLoadingMessages(true);
+      try {
+        const chatData = await workerRequest<{
+          id: string;
+          title: string;
+          messages: Array<{
+            id: string;
+            message: unknown;
+            createdAt: number;
+          }>;
+        }>(`/api/chats/${chatThreadId}`);
+
+        // Convert stored messages to UI format and set them
+        if (chatData.messages && chatData.messages.length > 0) {
+          // Use the stored message data directly as it should already be in the correct format
+          const uiMessages = chatData.messages
+            .map((msg) => msg.message)
+            .filter(Boolean);
+          setMessages(uiMessages as unknown as typeof messages);
+        } else {
+          // Clear messages if no history found
+          setMessages([]);
+        }
+      } catch (error) {
+        console.error("Failed to load chat history:", error);
+        toast.error("Failed to load chat history");
+      } finally {
+        setIsLoadingMessages(false);
+      }
+    },
+    [setMessages]
+  );
+
+  // Load existing chat when threadId changes
+  useEffect(() => {
+    if (threadId && threadId !== currentThreadId) {
+      setCurrentThreadId(threadId);
+      // Load existing chat messages
+      loadChatHistory(threadId);
+    }
+  }, [threadId, currentThreadId, loadChatHistory]);
+
+  // Load initial messages when component mounts with a threadId
+  useEffect(() => {
+    if (threadId && !currentThreadId) {
+      setCurrentThreadId(threadId);
+      threadIdRef.current = threadId;
+      console.log("threadIdRef.current", threadIdRef.current);
+      loadChatHistory(threadId);
+    }
+  }, [threadId, currentThreadId, loadChatHistory]);
 
   const addUserMessage = useCallback(
     (content: string) => {
@@ -123,12 +222,23 @@ const ChatInterface = ({
     [sendMessage]
   );
 
-  const handleSubmit = (message: PromptInputMessage) => {
+  const handleSubmit = async (message: PromptInputMessage) => {
     const hasText = Boolean(message.text);
     const hasAttachments = Boolean(message.files?.length);
 
     if (!(hasText || hasAttachments)) {
       return;
+    }
+
+    // Create a new thread only when sending the first message (for non-file chats)
+    if (!fileChat && !threadIdRef.current) {
+      const newThreadId = await createNewThread();
+      if (!newThreadId) {
+        return; // Failed to create thread
+      }
+      // Update both ref and state immediately
+      threadIdRef.current = newThreadId;
+      setCurrentThreadId(newThreadId);
     }
 
     if (message.files?.length) {
@@ -141,38 +251,75 @@ const ChatInterface = ({
     setText("");
   };
 
-  // const handleSuggestionClick = (suggestion: string) => {
-  //   setStatus("submitted");
-  //   addUserMessage(suggestion);
-  // };
-
   return (
-    <div className="relative flex size-full flex-col divide-y overflow-hidden max-w-3xl mx-auto">
-      <Conversation>
+    <div className="relative flex h-full flex-col divide-y overflow-y-auto max-w-3xl mx-auto">
+      {/* Chat Header */}
+      <div className="flex items-center justify-between p-4 border-b bg-background">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">
+            {currentThreadId ? "Chat" : "Start a conversation"}
+          </h2>
+          {currentThreadId && (
+            <span className="text-sm text-muted-foreground">
+              Thread: {currentThreadId.slice(0, 8)}...
+            </span>
+          )}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            threadIdRef.current = undefined;
+            setCurrentThreadId(undefined);
+            setMessages([]);
+            onThreadIdChange?.("");
+          }}
+        >
+          New Chat
+        </Button>
+      </div>
+      <Conversation className="relative size-full" style={{ height: "500px" }}>
         <ConversationContent>
-          {messages.map((message) => (
-            <Message from={message.role} key={message.id}>
-              <MessageContent className="prose max-w-[80%]">
-                {message.parts.map((part, index) => (
-                  <div key={`${message.id}-${index}`}>
-                    {part.type === "text" ? (
-                      <Response>{part.text}</Response>
-                    ) : part.type == "reasoning" ? (
-                      <Reasoning>
-                        <ReasoningTrigger />
-                        <ReasoningContent>{part.text}</ReasoningContent>
-                      </Reasoning>
-                    ) : part.type.startsWith("tool-") ? (
-                      <ToolCall
-                        type={part.type as `tool-${string}`}
-                        part={part as UIToolInvocation<UITool>}
-                      />
-                    ) : null}
-                  </div>
-                ))}
-              </MessageContent>
-            </Message>
-          ))}
+          {isLoadingMessages ? (
+            <div className="flex flex-col items-center justify-center p-8 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading chat history...</p>
+            </div>
+          ) : messages.length === 0 && !currentThreadId ? (
+            <div className="flex flex-col items-center justify-center p-8 text-center">
+              <div className="text-4xl mb-4">💬</div>
+              <h3 className="text-lg font-semibold mb-2">
+                Start a conversation
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Send a message to begin chatting with the AI assistant
+              </p>
+            </div>
+          ) : (
+            messages.map((message) => (
+              <Message from={message.role} key={message.id}>
+                <MessageContent className="prose max-w-[80%]">
+                  {message.parts.map((part, index) => (
+                    <div key={`${message.id}-${index}`}>
+                      {part.type === "text" ? (
+                        <Response>{part.text}</Response>
+                      ) : part.type == "reasoning" ? (
+                        <Reasoning>
+                          <ReasoningTrigger />
+                          <ReasoningContent>{part.text}</ReasoningContent>
+                        </Reasoning>
+                      ) : part.type.startsWith("tool-") ? (
+                        <ToolCall
+                          type={part.type as `tool-${string}`}
+                          part={part as UIToolInvocation<UITool>}
+                        />
+                      ) : null}
+                    </div>
+                  ))}
+                </MessageContent>
+              </Message>
+            ))
+          )}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>

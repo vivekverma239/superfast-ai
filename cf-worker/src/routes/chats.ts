@@ -40,15 +40,15 @@ chats.post("/", zValidator("json", createChatSchema), async (c) => {
 });
 
 // GET /chats/:chatId - Get chat with messages
-chats.get("/:chatId", async (c) => {
+chats.get("/:threadId", async (c) => {
   const db = c.get("db");
   const userId = c.get("userId");
-  const chatId = c.req.param("chatId");
+  const threadId = c.req.param("threadId");
 
   const chatRecord = await db
     .select()
     .from(chat)
-    .where(and(eq(chat.id, chatId), eq(chat.userId, userId)))
+    .where(and(eq(chat.id, threadId), eq(chat.userId, userId)))
     .limit(1);
 
   if (chatRecord.length === 0) {
@@ -58,7 +58,7 @@ chats.get("/:chatId", async (c) => {
   const messages = await db
     .select()
     .from(message)
-    .where(eq(message.chatId, chatId))
+    .where(eq(message.threadId, threadId))
     .orderBy(asc(message.createdAt));
 
   return c.json({
@@ -74,7 +74,7 @@ chats.delete("/:chatId", async (c) => {
   const chatId = c.req.param("chatId");
 
   // Delete all messages in the chat
-  await db.delete(message).where(eq(message.chatId, chatId));
+  await db.delete(message).where(eq(message.threadId, chatId));
 
   // Delete the chat
   const deleted = await db

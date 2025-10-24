@@ -1,1 +1,1 @@
-wrangler secret bulk .dev.vars
+wrangler secret bulk .prod.vars

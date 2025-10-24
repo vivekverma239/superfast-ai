@@ -12,6 +12,8 @@ import chats from "./routes/chats";
 import agents from "./routes/agents";
 import { VectorStore } from "./vector-store";
 import { instrument, ResolveConfigFn } from "@microlabs/otel-cf-workers";
+import { verification } from "./db/schema";
+import { GenericEndpointContext, parseState } from "better-auth";
 
 const app = new Hono<AppType>();
 
@@ -23,9 +25,9 @@ app.use(
     origin: [
       "http://localhost:3000",
       "http://localhost:3001",
-
       "http://localhost:3002",
       "https://superfast-ai.vercel.app",
+      "https://superfast-ai.curiouskid.dev",
     ],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
@@ -64,7 +66,19 @@ app.use("*", async (c, next) => {
 });
 
 // Better Auth routes under /api/auth/*
-app.on(["GET", "POST"], "/api/auth/*", (c) => {
+app.on(["GET", "POST"], "/api/auth/*", async (c) => {
+  // Chekc if query params has state
+  // if (c.req.query("state")) {
+  //   const state = c.req.query("state");
+  //   console.log("State", state);
+  //   const data = await parseState(c as unknown as GenericEndpointContext);
+  //   console.log("Data", data);
+  // }
+  // console.log("Better Auth request", c.req.raw.url);
+  // print the verification token
+  // const db = getDb(c.env.DB);
+  // const entries = await db.select().from(verification);
+  // console.log("Verification token", entries);
   return auth(c.env).handler(c.req.raw);
 });
 
@@ -120,22 +134,21 @@ app.onError((err, c) => {
 });
 
 const config: ResolveConfigFn = (env: Bindings, _trigger) => {
-  console.log(process.env.BRAINTRUST_API_KEY);
   return {
-    exporter: {
-      url: "https://api.braintrust.dev/otel/v1/traces",
-      headers: {
-        Authorization: `Bearer ${process.env.BRAINTRUST_API_KEY}`,
-        "x-bt-parent": `project_name:superfast-ai`,
-      },
-    },
     // exporter: {
-    //   url: "https://api.axiom.co/v1/traces",
+    //   url: "https://api.braintrust.dev/otel/v1/traces",
     //   headers: {
-    //     Authorization: `Bearer ${process.env.AXIOM_API_KEY}`,
-    //     "X-Axiom-Dataset": `superfast-ai`,
+    //     Authorization: `Bearer ${process.env.BRAINTRUST_API_KEY}`,
+    //     "x-bt-parent": `project_name:superfast-ai`,
     //   },
     // },
+    exporter: {
+      url: "https://api.axiom.co/v1/traces",
+      headers: {
+        Authorization: `Bearer ${process.env.AXIOM_API_KEY}`,
+        "X-Axiom-Dataset": `superfast-ai`,
+      },
+    },
     service: { name: "superfast-ai" },
   };
 };

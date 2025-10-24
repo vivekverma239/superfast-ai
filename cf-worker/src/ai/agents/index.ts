@@ -32,6 +32,9 @@ export const generalAgent = async ({
         },
       },
     },
+    experimental_telemetry: {
+      isEnabled: true,
+    },
   });
   return response.toUIMessageStreamResponse({ sendReasoning: true });
 };

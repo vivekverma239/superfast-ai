@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { FilesPanel } from "@/components/files-panel";
 import ChatInterface from "@/components/chat-interface";
+import { ChatHistory } from "@/components/chat-history";
 import { FileUploadDialog } from "@/components/file-upload-dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { workerRequest } from "@/lib/worker";
 import Link from "next/link";
 
@@ -19,21 +21,27 @@ type Folder = {
 export default function FolderDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const folderId = params.id as string;
 
   const [folder, setFolder] = useState<Folder | null>(null);
-  const [activeTab, setActiveTab] = useState<"files" | "chats">("files");
+  const [activeTab, setActiveTab] = useState<"files" | "chats">(
+    (searchParams.get("tab") as "files" | "chats") || "files"
+  );
+  const [threadId, setThreadId] = useState<string | null>(
+    searchParams.get("threadId") as string | null
+  );
+  const [showChatHistory, setShowChatHistory] = useState(false);
+  useEffect(() => {
+    router.replace(
+      `/folders/${folderId}?tab=${activeTab}&threadId=${threadId}`
+    );
+  }, [activeTab, folderId, router, threadId]);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [refreshFilesKey, setRefreshFilesKey] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (folderId) {
-      loadFolder();
-    }
-  }, [folderId]);
-
-  const loadFolder = async () => {
+  const loadFolder = useCallback(async () => {
     setLoading(true);
     try {
       const folderData = await workerRequest<Folder>(
@@ -47,7 +55,13 @@ export default function FolderDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [folderId, router]);
+
+  useEffect(() => {
+    if (folderId) {
+      loadFolder();
+    }
+  }, [folderId, loadFolder]);
 
   const handleUploadClick = () => {
     setIsUploadDialogOpen(true);
@@ -62,6 +76,18 @@ export default function FolderDetailPage() {
 
   const handleBackToFolders = () => {
     router.push("/folders");
+  };
+
+  const handleChatSelect = (selectedThreadId: string) => {
+    setThreadId(selectedThreadId);
+  };
+
+  const handleNewChat = () => {
+    setThreadId(null);
+  };
+
+  const handleToggleChatHistory = () => {
+    setShowChatHistory(!showChatHistory);
   };
 
   if (loading) {
@@ -96,7 +122,7 @@ export default function FolderDetailPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col h-[calc(100vh-56px)] overflow-hidden">
       {/* Folder Header */}
       <div className="border-b bg-background px-4 py-3">
         <div className="flex items-center justify-between">
@@ -120,7 +146,7 @@ export default function FolderDetailPage() {
           >
             Upload File
           </button> */}
-          <div>
+          <div className="flex items-center gap-4">
             {/* Tabs */}
             <Tabs
               value={activeTab}
@@ -138,6 +164,16 @@ export default function FolderDetailPage() {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+            {/* Chat History Toggle */}
+            {activeTab === "chats" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToggleChatHistory}
+              >
+                {showChatHistory ? "Hide History" : "Show History"}
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -149,7 +185,29 @@ export default function FolderDetailPage() {
           onUploadClick={handleUploadClick}
         />
       )}
-      {activeTab === "chats" && <ChatInterface />}
+      {activeTab === "chats" && (
+        <div className="flex gap-4 p-4 h-[calc(100vh-100px)]">
+          <div className="min-w-0 ">
+            <ChatInterface
+              threadId={threadId || undefined}
+              onThreadIdChange={setThreadId}
+              folderId={folderId}
+            />
+          </div>
+          {showChatHistory && (
+            <div className="flex-shrink-0">
+              <ChatHistory
+                folderId={folderId}
+                currentThreadId={threadId || undefined}
+                onChatSelect={handleChatSelect}
+                onNewChat={handleNewChat}
+                isVisible={showChatHistory}
+                onToggle={handleToggleChatHistory}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Upload Dialog */}
       {isUploadDialogOpen && (

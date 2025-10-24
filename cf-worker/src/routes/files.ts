@@ -217,12 +217,19 @@ files.post("/:fileId/answer", async (c) => {
 
   const storage = c.get("storage");
   const db = c.get("db");
+  const vectorStore = c.get("vectorStore");
   const data = await c.req.json<{
     messages: UIMessage[];
+    threadId?: string;
+    folderId?: string;
   }>();
 
   if (!data.messages) {
     return c.json({ error: "Messages are required" }, 400);
+  }
+
+  if (!vectorStore) {
+    return c.json({ error: "Vector store not found" }, 500);
   }
 
   const result = await answerFromPDF({
@@ -230,6 +237,10 @@ files.post("/:fileId/answer", async (c) => {
     messages: data.messages,
     storage,
     db,
+    vectorStore,
+    streaming: true,
+    threadId: data.threadId,
+    folderId: data.folderId,
   });
 
   return result;

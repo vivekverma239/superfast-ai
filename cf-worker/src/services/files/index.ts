@@ -7,8 +7,14 @@ import { file } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { getEmbeddings } from "@/ai/embeddings";
 import { getPdfHash } from "@/utils/pdf";
-import { answerFromPDFWithTOC, PDFAnswerAgent } from "@/ai/agents/fileAnswer";
-import { convertToModelMessages, UIMessage } from "ai";
+import { PDFAnswerAgent, PDFAgentContext } from "@/ai/agents/fileAnswer";
+import {
+  convertToModelMessages,
+  GenerateTextResult,
+  ToolSet,
+  ModelMessage,
+  UIMessage,
+} from "ai";
 
 export const indexFile = async ({
   fileRecord,
@@ -142,17 +148,60 @@ export const similaritySearchFile = async ({
   return results;
 };
 
-export const answerFromPDF = async ({
-  messages,
-  fileId,
-  storage,
-  db,
-}: {
-  messages: UIMessage[];
+// Overloaded function signatures for streaming and non-streaming cases
+export async function answerFromPDF(params: {
+  messages: UIMessage[] | string;
   fileId: string;
   storage: Storage;
   db: Database;
-}) => {
+  vectorStore: VectorStore;
+  streaming: true;
+  threadId?: string;
+  folderId?: string;
+}): Promise<Response>;
+
+export async function answerFromPDF(params: {
+  messages: UIMessage[] | string;
+  fileId: string;
+  storage: Storage;
+  db: Database;
+  vectorStore: VectorStore;
+  streaming: false;
+  threadId?: string;
+  folderId?: string;
+}): Promise<GenerateTextResult<ToolSet, never>>;
+
+export async function answerFromPDF(params: {
+  messages: UIMessage[] | string;
+  fileId: string;
+  storage: Storage;
+  db: Database;
+  vectorStore: VectorStore;
+  streaming?: boolean;
+  threadId?: string;
+  folderId?: string;
+}): Promise<Response | GenerateTextResult<ToolSet, never>>;
+
+// Implementation
+export async function answerFromPDF({
+  messages,
+  fileId,
+  storage,
+  vectorStore,
+  db,
+  streaming = false,
+  threadId,
+  folderId,
+}: {
+  messages: UIMessage[] | string;
+  fileId: string;
+  storage: Storage;
+  db: Database;
+  vectorStore: VectorStore;
+  streaming?: boolean;
+  threadId?: string;
+  folderId?: string;
+}): Promise<Response | GenerateTextResult<ToolSet, never>> {
   // Get toc
   const fileRecord = await db
     .select()
@@ -170,13 +219,31 @@ export const answerFromPDF = async ({
   if (!toc) {
     throw new Error(`Failed to get toc: ${fileId}`);
   }
-  const result = PDFAnswerAgent.toUIMessageStream({
-    context: {
-      fileId,
-      fileBuffer: new Buffer(pdfBuffer),
-      toc,
-    },
-    messages: convertToModelMessages(messages),
-  });
-  return result;
-};
+  const modelMessages: ModelMessage[] =
+    typeof messages === "string"
+      ? [{ role: "user", content: messages }]
+      : convertToModelMessages(messages);
+
+  const context: PDFAgentContext = {
+    db,
+    storage,
+    vectorStore,
+    fileId,
+    fileBuffer: new Buffer(pdfBuffer),
+    toc,
+    threadId,
+    folderId,
+  };
+
+  if (streaming) {
+    // Return streaming response
+    const result = await PDFAnswerAgent.stream(modelMessages, context);
+    return result;
+  } else {
+    // Return non-streaming response
+    const result = await PDFAnswerAgent.generate(modelMessages, context);
+
+    // Convert the generateText result to UIMessage format
+    return result;
+  }
+}

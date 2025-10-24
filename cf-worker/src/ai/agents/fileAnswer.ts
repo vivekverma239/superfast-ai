@@ -6,8 +6,10 @@ import { z } from "zod";
 import { runWithTokenTracker } from "@/utils/tokenTracker";
 import { createSubPdf } from "@/utils/pdf";
 import { Toc } from "../workflows/parsePdf";
-import { Agent } from "@ai-sdk-tools/agents";
-
+import { BaseAgent } from "./base";
+import { Database } from "@/db";
+import { Storage } from "@/storage";
+import { VectorStore } from "@/vector-store";
 export const answerFromPDF = async (
   pdfBuffer: Buffer,
   startPage: number,
@@ -190,14 +192,19 @@ export const answerFromPDFWithTOC = async ({
 };
 
 export type PDFAgentContext = {
+  db: Database;
+  storage: Storage;
+  vectorStore: VectorStore;
   fileId: string;
   fileBuffer: Buffer;
   toc: Toc;
+  threadId?: string;
+  folderId?: string;
 };
 
-export const PDFAnswerAgent = new Agent<PDFAgentContext>({
+export const PDFAnswerAgent = new BaseAgent<PDFAgentContext>({
   name: "PDFAnswerAgent",
-  model: getAILLM(OPENROUTER_MODEL.GROK_4_FAST),
+  model: OPENROUTER_MODEL.GROK_4_FAST,
   instructions: (context) => `
   You are a helpful PDF analysis assistant with access to a table of contents and PDF content analysis tools.
 

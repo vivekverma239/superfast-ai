@@ -7,7 +7,9 @@
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "typecheck": "tsc --noEmit",
     "db:push": "drizzle-kit push",
-    "vectorize:create": "wrangler vectorize create superfast-ai-index --dimensions=1024 --metric=cosine"
+    "vectorize:create": "wrangler vectorize create superfast-ai-index --dimensions=1024 --metric=cosine",
+    "migrate:local": "wrangler d1 migrations apply superfast-ai --local",
+    "migrate:remote": "wrangler d1 migrations apply superfast-ai"
   },
   "dependencies": {
     "@ai-sdk-tools/agents": "^0.2.2",
@@ -19,6 +21,7 @@
     "@aws-sdk/s3-request-presigner": "^3.910.0",
     "@hono/zod-validator": "^0.7.4",
     "@libsql/client": "^0.15.15",
+    "@mastra/ai-sdk": "^0.2.1",
     "@microlabs/otel-cf-workers": "^1.0.0-rc.52",
     "@openrouter/ai-sdk-provider": "^1.2.0",
     "@opentelemetry/api": "^1.9.0",
@@ -35,9 +38,11 @@
     "better-sqlite3": "^12.4.1",
     "braintrust": "^0.4.6",
     "drizzle-orm": "^0.44.6",
+    "exa-js": "^1.10.2",
     "hono": "^4.9.12",
     "i": "^0.3.7",
     "lodash": "^4.17.21",
+    "mastra": "^0.17.0",
     "nanoid": "^5.1.6",
     "neverthrow": "^8.2.0",
     "p-limit": "^7.1.1",

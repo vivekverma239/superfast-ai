@@ -1,11 +1,19 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, integer, text, index } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  integer,
+  text,
+  index,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 import { nanoid } from "nanoid";
 import {
   BasicPdfParseResult,
   DocumentMetadata,
   Toc,
 } from "@/ai/workflows/parsePdf";
+import { Artifact, Memory } from "@/mastra/agents/researcher";
+import { UIMessage } from "ai";
 
 export type FileMetadata = DocumentMetadata & {
   toc: Toc;
@@ -155,9 +163,8 @@ export const message = sqliteTable(
     id: text({ length: 21 })
       .primaryKey()
       .$defaultFn(() => nanoid()),
-    chatId: text({ length: 21 }).notNull(),
-    role: text({ enum: ["user", "assistant"] }).notNull(),
-    content: text().notNull(),
+    threadId: text({ length: 21 }).notNull(),
+    message: text({ mode: "json" }).$type<UIMessage>(),
     metadata: text({ mode: "json" }).$type<{
       sources?: { fileId: string; fileName: string; excerpt: string }[];
     }>(),
@@ -166,6 +173,34 @@ export const message = sqliteTable(
       .$defaultFn(() => Date.now()),
   },
   (table) => [
-    index("chat_message_chatid_idx").on(table.chatId, table.createdAt),
+    index("thread_message_threadid_idx").on(table.threadId, table.createdAt),
+  ]
+);
+
+export const memory = sqliteTable(
+  "memory",
+  {
+    id: text({ length: 21 })
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    userId: text({ length: 40 }).notNull(),
+    memory: text({ mode: "json" }).$type<Memory[]>(),
+  },
+  (table) => [uniqueIndex("memory_userid_idx").on(table.userId)]
+);
+
+export const artifact = sqliteTable(
+  "artifact",
+  {
+    id: text({ length: 21 })
+      .primaryKey()
+      .$defaultFn(() => nanoid()),
+    userId: text({ length: 40 }).notNull(),
+    threadId: text({ length: 21 }).notNull(),
+    artifact: text({ mode: "json" }).$type<Artifact>().notNull(),
+  },
+  (table) => [
+    uniqueIndex("artifact_userid_idx").on(table.userId),
+    index("artifact_threadid_idx").on(table.threadId),
   ]
 );

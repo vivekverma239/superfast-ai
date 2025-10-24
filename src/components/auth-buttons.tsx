@@ -5,6 +5,65 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { LogOut, Mail, User } from "lucide-react";
 import { authClient } from "@/lib/auth";
 import Image from "next/image";
+import { toast } from "sonner";
+
+export const SignInButton = () => {
+  const makePostRequest = async (
+    url: string,
+    data: Record<string, string | number | boolean>,
+    target: "_self" | "_blank" = "_self"
+  ) => {
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = url;
+    form.target = target;
+    form.style.display = "none";
+    form.enctype = "application/x-www-form-urlencoded";
+
+    Object.entries(data).forEach(([k, v]) => {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = k;
+      input.value = typeof v === "string" ? v : JSON.stringify(v);
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
+    form.remove();
+  };
+
+  return (
+    <Button
+      onClick={async () => {
+        const response = await authClient.signIn.social({
+          provider: "google",
+          callbackURL: `${window.location.origin}/`,
+          errorCallbackURL: `${window.location.origin}/`,
+          disableRedirect: true,
+        });
+        console.log("response", response);
+        if (response.data?.url) {
+          window.open(response.data.url, "_blank");
+        } else {
+          toast.error("Failed to sign in");
+        }
+
+        // Directly open the sign in URL
+        // makePostRequest(
+        //   `${process.env.NEXT_PUBLIC_API_URL}/api/auth/sign-in/social`,
+        //   {
+        //     provider: "google",
+        //     callbackURL: window.location.origin,
+        //   },
+        //   "_blank"
+        // );
+      }}
+    >
+      Sign in
+    </Button>
+  );
+};
 
 export function AuthButtons() {
   const { data: session, isPending } = authClient.useSession();
@@ -14,18 +73,7 @@ export function AuthButtons() {
   }
 
   if (!session?.user) {
-    return (
-      <Button
-        onClick={() =>
-          authClient.signIn.social({
-            provider: "google",
-            callbackURL: `${window.location.origin}/`,
-          })
-        }
-      >
-        Sign in
-      </Button>
-    );
+    return <SignInButton />;
   }
 
   return (

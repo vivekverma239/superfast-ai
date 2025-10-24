@@ -146,7 +146,7 @@ export function parseJsonFromText<T = unknown>(text: string): T | null {
   }
 }
 
-async function summarizeChunkWithPages(
+export async function summarizeChunkWithPages(
   pages: Array<{ pageNumber: number; content: string }>
 ): Promise<{
   summary: string;
@@ -407,8 +407,8 @@ export async function extractDocumentMetadataFromPageSummaries(
         .map(
           (t) => `
         Page Range ${t?.startPage}-${t?.endPage}:\nSummary: ${
-            t?.metadata.summary
-          }\n\n
+          t?.metadata.summary
+        }\n\n
         Metadata:\n${JSON.stringify(t?.metadata)}\n\n`
         )
         .join("\n"),
@@ -670,9 +670,8 @@ export async function parseBasicPDF(
   });
 
   const pageSummaries = chunks.map((c) => c.pageSummaries).flat();
-  const metadata = await extractDocumentMetadataFromPageSummaries(
-    pageSummaries
-  );
+  const metadata =
+    await extractDocumentMetadataFromPageSummaries(pageSummaries);
   // Added: extract TOC
   const toc = await extractTocFromPageSummaries(pageSummaries);
 
@@ -700,9 +699,8 @@ async function _parseBasicPDFStructured(
   const pageTexts = await extractPageContent(buffer);
 
   const pageSummaries = await summarizePages(pageTexts);
-  const metadata = await extractDocumentMetadataFromPageSummaries(
-    pageSummaries
-  );
+  const metadata =
+    await extractDocumentMetadataFromPageSummaries(pageSummaries);
   // Added: extract TOC
   const toc = await extractTocFromPageSummaries(pageSummaries);
 
