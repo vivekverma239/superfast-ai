@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,7 +23,6 @@ type Folder = {
 };
 
 export default function FoldersPage() {
-  const router = useRouter();
   const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -125,7 +123,7 @@ export default function FoldersPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {folders.map((folder) => (
-              <Link href={`/folders/${folder.id}`} key={folder.id}>
+              <Link href={`/folders/${folder.id}/files`} key={folder.id}>
                 <Card className="p-6 hover:shadow-md transition-shadow cursor-pointer group">
                   <div className="flex items-start justify-between mb-4">
                     <FolderOpen className="h-8 w-8 text-blue-500 group-hover:text-blue-600 transition-colors" />

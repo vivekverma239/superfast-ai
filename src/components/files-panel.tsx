@@ -39,6 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { SidebarTrigger } from "./ui/sidebar";
 
 type FileType = {
   id: string;
@@ -317,9 +318,10 @@ export function FilesPanel({
 
   return (
     <div className="flex-1 flex flex-col bg-muted/10">
-      <div className="px-4 py-2">
-        <div className="flex items-center gap-3 mb-3">
-          <h2 className="text-lg font-semibold">
+      <div className="px-4 py-2 border-b">
+        <div className="flex items-center gap-3">
+          <SidebarTrigger />
+          <h2 className="text-lg font-semibold transition-all">
             {isSearchMode ? "Search Results" : "Files"}
           </h2>
           <span className="text-sm text-muted-foreground">

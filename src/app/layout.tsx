@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Sora } from "next/font/google";
 import "./globals.css";
-import { AuthButtons } from "@/components/auth-buttons";
-import { Logo } from "@/components/logo";
+import { MainLayout } from "@/components/main-layout";
 
 const sora = Sora({
   variable: "--font-sora",
@@ -23,11 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={` ${sora.className} antialiased`}>
-        <div className="p-4 py-2 border-b flex items-center justify-between bg-white dark:bg-gray-900">
-          <Logo />
-          <AuthButtons />
-        </div>
-        <div className="container mx-auto max-w-7xl px-4">{children}</div>
+        <MainLayout>{children}</MainLayout>
       </body>
     </html>
   );

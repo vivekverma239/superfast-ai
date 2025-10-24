@@ -196,10 +196,14 @@ const ChatInterface = ({
 
   // Load existing chat when threadId changes
   useEffect(() => {
-    if (threadId && threadId !== currentThreadId) {
+    if (threadId !== currentThreadId) {
       setCurrentThreadId(threadId);
       // Load existing chat messages
-      loadChatHistory(threadId);
+      if (threadId) {
+        loadChatHistory(threadId);
+      } else {
+        setMessages([]);
+      }
     }
   }, [threadId, currentThreadId, loadChatHistory]);
 
@@ -253,31 +257,6 @@ const ChatInterface = ({
 
   return (
     <div className="relative flex h-full flex-col divide-y overflow-y-auto max-w-3xl mx-auto">
-      {/* Chat Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-background">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-semibold">
-            {currentThreadId ? "Chat" : "Start a conversation"}
-          </h2>
-          {currentThreadId && (
-            <span className="text-sm text-muted-foreground">
-              Thread: {currentThreadId.slice(0, 8)}...
-            </span>
-          )}
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            threadIdRef.current = undefined;
-            setCurrentThreadId(undefined);
-            setMessages([]);
-            onThreadIdChange?.("");
-          }}
-        >
-          New Chat
-        </Button>
-      </div>
       <Conversation className="relative size-full" style={{ height: "500px" }}>
         <ConversationContent>
           {isLoadingMessages ? (

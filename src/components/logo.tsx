@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Zap } from "lucide-react";
 
-export function Logo() {
+export function Logo({ iconOnly = false }: { iconOnly?: boolean }) {
   return (
     <Link
       href="/folders"
@@ -12,14 +12,16 @@ export function Logo() {
       <div className="relative">
         <Zap className="h-6 w-6 text-blue-600" />
       </div>
-      <div className="flex flex-col">
-        <span className="text-lg font-bold text-gray-900 dark:text-white">
-          SuperFast AI
-        </span>
-        <span className="text-xs text-gray-500 dark:text-gray-400 -mt-1">
-          Lightning Fast AI
-        </span>
-      </div>
+      {!iconOnly && (
+        <div className="flex flex-col">
+          <span className="text-lg font-bold text-gray-900 dark:text-white">
+            SuperFast AI
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400 -mt-1">
+            Lightning Fast AI
+          </span>
+        </div>
+      )}
     </Link>
   );
 }
