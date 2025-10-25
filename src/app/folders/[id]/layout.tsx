@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { Folder } from "@/types";
-import { serverRequest } from "@/lib/server";
+import { requireAuth, serverRequest } from "@/lib/server";
 import { FolderSidebar } from "@/components/folder-sidebar";
 
 interface FolderLayoutProps {
@@ -14,6 +14,9 @@ export default async function FolderLayout({
   children,
   params,
 }: FolderLayoutProps) {
+  // Require authentication - will redirect to login if not authenticated
+  await requireAuth();
+
   const { id: folderId } = await params;
 
   // Fetch folder data on the server

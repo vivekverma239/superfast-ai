@@ -4,35 +4,11 @@ import { Button } from "./ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { LogOut, Mail, User } from "lucide-react";
 import { authClient } from "@/lib/auth";
+import { useAuth } from "./auth-provider";
 import Image from "next/image";
 import { toast } from "sonner";
 
 export const SignInButton = () => {
-  const makePostRequest = async (
-    url: string,
-    data: Record<string, string | number | boolean>,
-    target: "_self" | "_blank" = "_self"
-  ) => {
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = url;
-    form.target = target;
-    form.style.display = "none";
-    form.enctype = "application/x-www-form-urlencoded";
-
-    Object.entries(data).forEach(([k, v]) => {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = k;
-      input.value = typeof v === "string" ? v : JSON.stringify(v);
-      form.appendChild(input);
-    });
-
-    document.body.appendChild(form);
-    form.submit();
-    form.remove();
-  };
-
   return (
     <Button
       onClick={async () => {
@@ -48,16 +24,6 @@ export const SignInButton = () => {
         } else {
           toast.error("Failed to sign in");
         }
-
-        // Directly open the sign in URL
-        // makePostRequest(
-        //   `${process.env.NEXT_PUBLIC_API_URL}/api/auth/sign-in/social`,
-        //   {
-        //     provider: "google",
-        //     callbackURL: window.location.origin,
-        //   },
-        //   "_blank"
-        // );
       }}
     >
       Sign in
@@ -66,13 +32,13 @@ export const SignInButton = () => {
 };
 
 export function AuthButtons() {
-  const { data: session, isPending } = authClient.useSession();
+  const { user, isLoading, signOut } = useAuth();
 
-  if (isPending) {
+  if (isLoading) {
     return <div className="text-sm text-muted-foreground">Loading...</div>;
   }
 
-  if (!session?.user) {
+  if (!user) {
     return <SignInButton />;
   }
 
@@ -86,7 +52,7 @@ export function AuthButtons() {
         >
           <div className="h-10 w-10 rounded-md overflow-hidden relative">
             <Image
-              src={`https://api.dicebear.com/9.x/glass/svg?seed=${session?.user?.email}`}
+              src={`https://api.dicebear.com/9.x/glass/svg?seed=${user?.email}`}
               alt="User"
               width={24}
               height={24}
@@ -105,7 +71,7 @@ export function AuthButtons() {
           <div className="flex items-center gap-4 mb-6">
             <div className="h-12 w-12 rounded-md overflow-hidden shadow-lg relative">
               <Image
-                src={`https://api.dicebear.com/9.x/glass/svg?seed=${session?.user?.email}`}
+                src={`https://api.dicebear.com/9.x/glass/svg?seed=${user?.email}`}
                 alt="User"
                 width={48}
                 height={48}
@@ -116,11 +82,11 @@ export function AuthButtons() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-base font-semibold text-foreground truncate">
-                {session?.user?.name || "User"}
+                {user?.name || "User"}
               </p>
               <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                 <Mail className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="truncate">{session?.user?.email}</span>
+                <span className="truncate">{user?.email}</span>
               </div>
             </div>
           </div>
@@ -129,7 +95,7 @@ export function AuthButtons() {
             <Button
               variant="ghost"
               className="w-full justify-start gap-3 h-11 px-3 hover:bg-destructive/10 hover:text-destructive transition-colors"
-              onClick={() => authClient.signOut()}
+              onClick={signOut}
             >
               <LogOut className="h-4 w-4" />
               <span className="font-medium">Sign out</span>

@@ -1,4 +1,6 @@
 import { cookies } from "next/headers";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const serverRequest = async <T = unknown>(
   path: string,
@@ -36,3 +38,55 @@ export const serverRequest = async <T = unknown>(
 
   return response.json() as Promise<T>;
 };
+
+export async function getServerSession() {
+  const headersList = await headers();
+  const cookieHeader = headersList.get("cookie");
+
+  if (!cookieHeader) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/auth/get-session`,
+      {
+        headers: {
+          cookie: cookieHeader,
+        },
+        cache: "force-cache",
+        next: { revalidate: 3600 },
+      }
+    );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const session = await response.json();
+    return session;
+  } catch (error) {
+    console.error("Failed to get server session:", error);
+    return null;
+  }
+}
+
+export async function requireAuth() {
+  const session = await getServerSession();
+
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  return session;
+}
+
+export async function requireAuthWithRedirect(redirectTo: string) {
+  const session = await getServerSession();
+
+  if (!session?.user) {
+    redirect(redirectTo);
+  }
+
+  return session;
+}
