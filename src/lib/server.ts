@@ -5,7 +5,6 @@ export const serverRequest = async <T = unknown>(
   init?: RequestInit
 ): Promise<T> => {
   const cookieStore = await cookies();
-  console.log("cookieStore", cookieStore);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
   if (!apiUrl) {

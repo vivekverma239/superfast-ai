@@ -1,23 +1,28 @@
-import { ReactNode } from "react";
+"use client";
+
+import { ReactNode, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   SidebarProvider,
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { MainSidebar } from "@/components/main-sidebar";
-import { headers } from "next/headers";
 
 interface MainLayoutProps {
   children: ReactNode;
 }
 
-export async function MainLayout({ children }: MainLayoutProps) {
-  // get the pathname from the headers
-  const headersList = await headers();
-  const pathname = headersList.get("x-pathname") || "/";
+export function MainLayout({ children }: MainLayoutProps) {
+  const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // If folder detail page don't show the sidebar
-  if (pathname.match(/^\/folders\/[^\/]+\//)) {
+  if (mounted && pathname.match(/^\/folders\/[^\/]+\//)) {
     console.debug("Folder detail page, don't show the sidebar");
     return <>{children}</>;
   }

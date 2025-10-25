@@ -36,9 +36,10 @@ export const auth = (env: Bindings): ReturnType<typeof betterAuth> => {
       },
     },
     advanced: {
-      disableCSRFCheck: true,
       crossSubDomainCookies: {
         enabled: true,
+        domain:
+          process.env.NODE_ENV === "prod" ? "curiouskid.dev" : "localhost",
       },
     },
     // onAPIError: {

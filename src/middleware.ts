@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export function middleware(request: NextRequest) {
+export function middleware(_request: NextRequest) {
   // In development, you might want to mock the D1 database
   // In production with Cloudflare, this will be available via platform
 
-  // Add header for the pathname
-  const pathname = request.nextUrl.pathname;
-  request.headers.set("x-pathname", pathname);
-  return NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+  // No need to add pathname header since we're using client-side detection
+  return NextResponse.next();
 }
 
 export const config = {
